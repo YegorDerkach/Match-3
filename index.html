@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Match-3 Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       body {
         display: flex;
@@ -12,11 +13,17 @@
         height: 100vh;
         margin: 0;
         background: #2b2b2b;
+        -webkit-tap-highlight-color: transparent;
+        touch-action: none;
       }
 
       canvas {
         border: 2px solid white;
         background: #2e2e2e;
+        width: 512px;
+        height: 512px;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
       }
 
       .btn {
@@ -46,9 +53,10 @@
         }
 
         canvas {
-          width: 95%;
-          height: auto;
+          width: 95vw;
+          height: 95vw; /* робимо квадрат */
           max-width: 600px;
+          max-height: 600px;
         }
 
         .btn {
@@ -62,21 +70,6 @@
           width: 100%;
           height: 60px;
           font-size: 18px;
-        }
-        canvas {
-          border: 2px solid white;
-          background: #2e2e2e;
-          width: 512px;
-          height: 512px;
-        }
-
-        @media (max-width: 947px) {
-          canvas {
-            width: 95vw;
-            height: 95vw;
-            max-width: 600px;
-            max-height: 600px;
-          }
         }
       }
     </style>

@@ -8,6 +8,15 @@ if (!ctx) {
 }
 const game = new Game(canvas, ctx);
 
+function handleResize() {
+  game.handleResize();
+}
+
+// Initial sizing and listeners
+handleResize();
+window.addEventListener("resize", handleResize);
+window.addEventListener("orientationchange", handleResize);
+
 const startBtn = document.getElementById("startBtn") as HTMLButtonElement;
 const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement;
 

@@ -37,6 +37,8 @@ export class Game {
     this.board = new Board();
 
     this.canvas.addEventListener("click", this.onClick.bind(this));
+    this.setupTouch();
+    this.handleResize();
     this.updateUI();
     }
   private setState(next: GameState) {
@@ -58,8 +60,12 @@ export class Game {
 
     private onClick(event: MouseEvent) {
         const rect = this.canvas.getBoundingClientRect();
-        const x = Math.floor((event.clientX - rect.left) / this.cellSize);
-        const y = Math.floor((event.clientY - rect.top) / this.cellSize);
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const localX = (event.clientX - rect.left) * scaleX;
+        const localY = (event.clientY - rect.top) * scaleY;
+        const x = Math.floor(localX / this.cellSize);
+        const y = Math.floor(localY / this.cellSize);
       
         if (x < 0 || x >= this.board.width || y < 0 || y >= this.board.height) return;
       
@@ -340,6 +346,58 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     this.ctx.stroke();
 
     this.ctx.restore();
+  }
+
+  public handleResize() {
+    // Keep canvas square and map internal pixels for crisp rendering
+    const rect = this.canvas.getBoundingClientRect();
+    const sizeCss = Math.min(rect.width, rect.height || rect.width);
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    const targetPx = Math.floor(sizeCss * dpr);
+    // Snap to multiple of board dimensions to avoid subpixel cell sizes
+    const cells = Math.max(this.board.width, this.board.height);
+    const snapped = Math.max(cells, targetPx - (targetPx % cells));
+    if (this.canvas.width !== snapped || this.canvas.height !== snapped) {
+      this.canvas.width = snapped;
+      this.canvas.height = snapped;
+    }
+    this.cellSize = Math.floor(this.canvas.width / this.board.width);
+  }
+
+  private setupTouch() {
+    // Basic tap-to-select and second tap to swap
+    this.canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        if (e.touches.length !== 1) return;
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+    this.canvas.addEventListener(
+      "touchend",
+      (e) => {
+        const touch = e.changedTouches[0];
+        if (!touch) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
+        const localX = (touch.clientX - rect.left) * scaleX;
+        const localY = (touch.clientY - rect.top) * scaleY;
+        const x = Math.floor(localX / this.cellSize);
+        const y = Math.floor(localY / this.cellSize);
+        if (x < 0 || x >= this.board.width || y < 0 || y >= this.board.height) return;
+        if (this.state !== GameState.Idle) return;
+        if (!this.selected) {
+          this.selected = { x, y };
+        } else {
+          this.trySwap(this.selected.x, this.selected.y, x, y);
+          this.selected = null;
+        }
+        e.preventDefault();
+      },
+      { passive: false }
+    );
   }
 
   private anyItemRemoving(): boolean {
