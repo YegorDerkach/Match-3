@@ -26,6 +26,8 @@ export class Game {
   private lastTime: number = 0;
   private board: Board;
   private cellSize: number = CELL_SIZE;
+  private rafId: number | null = null;
+  private dirty: boolean = true;
 
   private selected: { x: number; y: number } | null = null;
   private state: GameState = GameState.Idle;
@@ -40,11 +42,13 @@ export class Game {
     this.setupTouch();
     this.handleResize();
     this.updateUI();
+    this.requestTick();
     }
   private setState(next: GameState) {
     if (this.state === next) return;
     this.state = next;
     this.updateUI();
+    if (this.state !== GameState.Idle) this.requestTick();
   }
 
   private updateUI() {
@@ -73,13 +77,16 @@ export class Game {
         if (this.state !== GameState.Idle) return;
 
         if (!this.selected) {
-          
           this.selected = { x, y };
+          this.dirty = true;
+          this.requestTick();
         } else {
           
           this.trySwap(this.selected.x, this.selected.y, x, y);
       
           this.selected = null;
+          this.dirty = true;
+          this.requestTick();
         }
       }
 
@@ -141,7 +148,10 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
 
 
         if (!isReverting) {
-            const matches = this.board.findMatches();
+            const matches = this.board.findMatchesLocalized([
+              { x: x1, y: y1 },
+              { x: x2, y: y2 },
+            ]);
             if (matches.length === 0) {
                 
                 this.revertSwap(x1, y1, x2, y2);
@@ -163,7 +173,7 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     if (this.loopStarted) return;
     this.loopStarted = true;
     this.updateUI();
-    requestAnimationFrame(this.loop.bind(this));
+    this.requestTick();
   }
 
   reset() {
@@ -171,17 +181,33 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     this.board = new Board();
     this.selected = null;
     this.setState(GameState.Idle);
+    this.dirty = true;
+    this.requestTick();
   }
 
   private loop(timestamp: number) {
+    this.rafId = null;
     if (!this.lastTime) this.lastTime = timestamp;
     const delta = timestamp - this.lastTime;
     this.lastTime = timestamp;
 
     this.update(delta);
-    this.render();
 
-    requestAnimationFrame(this.loop.bind(this));
+    const hasAnimations = this.state !== GameState.Idle || this.anyItemFalling() || this.anyItemRemoving();
+    if (hasAnimations || this.dirty) {
+      this.render();
+      this.dirty = false;
+    }
+
+    if (hasAnimations) {
+      this.requestTick();
+    }
+  }
+
+  private requestTick() {
+    if (this.rafId == null) {
+      this.rafId = requestAnimationFrame(this.loop.bind(this));
+    }
   }
 
   private update(delta: number) {
@@ -321,17 +347,24 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     SHARED_BOX.half = half;
 
     this.ctx.save();
-    
+
     this.ctx.translate(cx, cy);
     const s = item.animation.scale ?? 1;
     this.ctx.scale(s, s);
     this.ctx.translate(-cx, -cy);
 
-    
-    this.ctx.shadowColor = "rgba(0,0,0,0.25)";
-    this.ctx.shadowBlur = SHADOW_BLUR;
-    this.ctx.shadowOffsetX = 0;
-    this.ctx.shadowOffsetY = SHADOW_OFFSET_Y;
+    const enableEffects = cell >= 40;
+    if (enableEffects) {
+      this.ctx.shadowColor = "rgba(0,0,0,0.25)";
+      this.ctx.shadowBlur = SHADOW_BLUR;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = SHADOW_OFFSET_Y;
+    } else {
+      this.ctx.shadowColor = "transparent";
+      this.ctx.shadowBlur = 0;
+      this.ctx.shadowOffsetX = 0;
+      this.ctx.shadowOffsetY = 0;
+    }
 
 
     this.ctx.fillStyle = item.getColor();
@@ -341,20 +374,20 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
 
 
     this.ctx.shadowColor = "transparent";
-    this.ctx.lineWidth = OUTLINE_LINE_WIDTH;
-    this.ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    this.ctx.stroke();
+    if (enableEffects) {
+      this.ctx.lineWidth = OUTLINE_LINE_WIDTH;
+      this.ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      this.ctx.stroke();
+    }
 
     this.ctx.restore();
   }
 
   public handleResize() {
-    // Keep canvas square and map internal pixels for crisp rendering
     const rect = this.canvas.getBoundingClientRect();
     const sizeCss = Math.min(rect.width, rect.height || rect.width);
-    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    const dpr = Math.min(2, Math.max(1, Math.floor(window.devicePixelRatio || 1)));
     const targetPx = Math.floor(sizeCss * dpr);
-    // Snap to multiple of board dimensions to avoid subpixel cell sizes
     const cells = Math.max(this.board.width, this.board.height);
     const snapped = Math.max(cells, targetPx - (targetPx % cells));
     if (this.canvas.width !== snapped || this.canvas.height !== snapped) {
@@ -362,10 +395,11 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
       this.canvas.height = snapped;
     }
     this.cellSize = Math.floor(this.canvas.width / this.board.width);
+    this.dirty = true;
+    this.requestTick();
   }
 
   private setupTouch() {
-    // Basic tap-to-select and second tap to swap
     this.canvas.addEventListener(
       "touchstart",
       (e) => {
@@ -390,9 +424,13 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
         if (this.state !== GameState.Idle) return;
         if (!this.selected) {
           this.selected = { x, y };
+          this.dirty = true;
+          this.requestTick();
         } else {
           this.trySwap(this.selected.x, this.selected.y, x, y);
           this.selected = null;
+          this.dirty = true;
+          this.requestTick();
         }
         e.preventDefault();
       },

@@ -53,6 +53,58 @@ export class Board {
     if (x < 0 || x >= this.width) return null;
     return this.grid[y][x];
   }
+  
+  public findMatchesLocalized(positions: { x: number; y: number }[]): { x: number; y: number }[] {
+    const matches: { x: number; y: number }[] = [];
+    const rows = new Set<number>();
+    const cols = new Set<number>();
+    for (const p of positions) {
+      if (p.y >= 0 && p.y < this.height) rows.add(p.y);
+      if (p.x >= 0 && p.x < this.width) cols.add(p.x);
+    }
+    rows.forEach((y) => {
+      let matchLength = 1;
+      for (let x = 1; x < this.width; x++) {
+        if ((this.grid[y][x] as Item)?.type === (this.grid[y][x - 1] as Item)?.type) {
+          matchLength++;
+        } else {
+          if (matchLength >= 3) {
+            for (let k = 0; k < matchLength; k++) {
+              matches.push({ x: x - 1 - k, y });
+            }
+          }
+          matchLength = 1;
+        }
+      }
+      if (matchLength >= 3) {
+        for (let k = 0; k < matchLength; k++) {
+          matches.push({ x: this.width - 1 - k, y });
+        }
+      }
+    });
+    cols.forEach((x) => {
+      let matchLength = 1;
+      for (let y = 1; y < this.height; y++) {
+        if ((this.grid[y][x] as Item)?.type === (this.grid[y - 1][x] as Item)?.type) {
+          matchLength++;
+        } else {
+          if (matchLength >= 3) {
+            for (let k = 0; k < matchLength; k++) {
+              matches.push({ x, y: y - 1 - k });
+            }
+          }
+          matchLength = 1;
+        }
+      }
+      if (matchLength >= 3) {
+        for (let k = 0; k < matchLength; k++) {
+          matches.push({ x, y: this.height - 1 - k });
+        }
+      }
+    });
+    const unique = Array.from(new Map(matches.map(m => [`${m.x},${m.y}`, m])).values());
+    return unique;
+  }
     
     public findMatches(): { x: number; y: number }[] {
     const matches: { x: number; y: number }[] = [];

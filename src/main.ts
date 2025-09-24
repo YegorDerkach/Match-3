@@ -12,10 +12,18 @@ function handleResize() {
   game.handleResize();
 }
 
-// Initial sizing and listeners
+let resizeRaf = 0 as unknown as number;
+function handleResizeDebounced() {
+  if (resizeRaf) return;
+  resizeRaf = requestAnimationFrame(() => {
+    resizeRaf = 0 as unknown as number;
+    handleResize();
+  });
+}
+
 handleResize();
-window.addEventListener("resize", handleResize);
-window.addEventListener("orientationchange", handleResize);
+window.addEventListener("resize", handleResizeDebounced);
+window.addEventListener("orientationchange", handleResizeDebounced);
 
 const startBtn = document.getElementById("startBtn") as HTMLButtonElement;
 const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement;
