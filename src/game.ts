@@ -108,6 +108,18 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     item2.y = y1;
   }
 
+  private snapBoardPositions() {
+    for (let y = 0; y < this.board.height; y++) {
+      for (let x = 0; x < this.board.width; x++) {
+        const it = this.board.grid[y][x];
+        if (it) {
+          it.x = x;
+          it.y = y;
+        }
+      }
+    }
+  }
+
   private revertSwap(x1: number, y1: number, x2: number, y2: number) {
     
     this.swapItems(x1, y1, x2, y2, true);
@@ -143,6 +155,8 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
         this.commitSwap(x1, y1, x2, y2, item1, item2);
 
         this.setState(GameState.Idle);
+        this.dirty = true;
+        this.requestTick();
 
 
         if (!isReverting) {
@@ -151,7 +165,6 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
               { x: x2, y: y2 },
             ]);
             if (matches.length === 0) {
-                
                 this.revertSwap(x1, y1, x2, y2);
             } else {
                 this.board.removeMatches(matches);
