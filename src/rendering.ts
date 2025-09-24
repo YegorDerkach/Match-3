@@ -52,7 +52,6 @@ export const SHARED_BOX: DrawBox = {
 };
 
 
-// Sprite cache to avoid rebuilding shapes every frame on weak devices
 const spriteCache = new Map<string, HTMLCanvasElement>();
 
 function keyFor(type: ItemType, size: number, enableEffects: boolean, color: string): string {
