@@ -1,7 +1,7 @@
 import { GameState } from "./types";
 import { Board } from "./board";
 import { Item, ItemType } from "./item";
-import { drawers, SHARED_BOX } from "./rendering";
+import { SHARED_BOX, getItemSprite } from "./rendering";
 
 const CELL_SIZE = 64;
 const TILE_PADDING = 8;
@@ -54,9 +54,7 @@ export class Game {
   private updateUI() {
     const disabled = this.state !== GameState.Idle;
     this.canvas.style.cursor = disabled ? "not-allowed" : "pointer";
-    const startBtn = document.getElementById("startBtn") as HTMLButtonElement | null;
     const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement | null;
-    if (startBtn) startBtn.disabled = disabled || this.loopStarted;
     if (resetBtn) resetBtn.disabled = disabled;
   }
 
@@ -354,31 +352,8 @@ private swapSpeed: number = SWAP_SPEED_PX_PER_FRAME;
     this.ctx.translate(-cx, -cy);
 
     const enableEffects = cell >= 40;
-    if (enableEffects) {
-      this.ctx.shadowColor = "rgba(0,0,0,0.25)";
-      this.ctx.shadowBlur = SHADOW_BLUR;
-      this.ctx.shadowOffsetX = 0;
-      this.ctx.shadowOffsetY = SHADOW_OFFSET_Y;
-    } else {
-      this.ctx.shadowColor = "transparent";
-      this.ctx.shadowBlur = 0;
-      this.ctx.shadowOffsetX = 0;
-      this.ctx.shadowOffsetY = 0;
-    }
-
-
-    this.ctx.fillStyle = item.getColor();
-    this.ctx.beginPath();
-    drawers[item.type](this.ctx, SHARED_BOX);
-    this.ctx.fill();
-
-
-    this.ctx.shadowColor = "transparent";
-    if (enableEffects) {
-      this.ctx.lineWidth = OUTLINE_LINE_WIDTH;
-      this.ctx.strokeStyle = "rgba(255,255,255,0.18)";
-      this.ctx.stroke();
-    }
+    const sprite = getItemSprite(item.type, cell, enableEffects, item.getColor());
+    this.ctx.drawImage(sprite, px + padding, py + padding, size, size);
 
     this.ctx.restore();
   }

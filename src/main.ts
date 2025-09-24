@@ -25,12 +25,7 @@ handleResize();
 window.addEventListener("resize", handleResizeDebounced);
 window.addEventListener("orientationchange", handleResizeDebounced);
 
-const startBtn = document.getElementById("startBtn") as HTMLButtonElement;
 const resetBtn = document.getElementById("resetBtn") as HTMLButtonElement;
-
-startBtn?.addEventListener("click", () => {
-  game.start();
-});
 
 resetBtn?.addEventListener("click", () => {
   game.reset();
